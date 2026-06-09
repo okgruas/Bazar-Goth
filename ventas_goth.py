@@ -9,8 +9,18 @@ st.set_page_config(page_title="Bazar Nocturnal", layout="wide")
 def get_db():
     return shelve.open("bazar_db")
 
+# --- CSS PARA EL ESTILO ROSA ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #fff0f5; }
+    .stButton>button { background-color: #ec407a; color: white; }
+    h1, h2, h3 { color: #ec407a; }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- UI PRINCIPAL ---
-st.markdown("<h1 style='text-align:center;'>🌙 BAZAR NOCTURNAL GOTH</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🌙 BAZAR DIGITAL K-POP & CLÓSET</h1>", unsafe_allow_html=True)
+
 tab1, tab2, tab3 = st.tabs(["🛍️ Ver el Bazar / Clóset", "💜 Registrarse como Vendedora", "🔐"])
 
 with tab1:
@@ -19,19 +29,18 @@ with tab1:
         bloques = db.get("bloques", [])
         for b in bloques:
             if b['estado'] == "ACTIVO":
-                with st.container():
-                    st.markdown(f"**🟢 ACTIVO** - {b['vendedor']}")
-                    st.write(f"Categoría: {b['categoria']} | Punto: {b['punto']}")
-                    st.info(b['productos'])
-                    
-                    st.write("📸 Fotos:")
-                    cols = st.columns(5)
-                    for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
-                        with cols[idx % 5]:
-                            st.image(base64.b64decode(img_b64))
-                    
-                    st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
-                    st.divider()
+                st.markdown(f"**🟢 ACTIVO** - {b['vendedor']}")
+                st.write(f"Categoría: {b['categoria']} | Punto: {b['punto']}")
+                st.info(b['productos'])
+                
+                st.write("📸 Fotos:")
+                cols = st.columns(5)
+                for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
+                    with cols[idx % 5]:
+                        st.image(base64.b64decode(img_b64))
+                
+                st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
+                st.divider()
 
 with tab2:
     st.subheader("💜 Registra tu Bloque de Anuncios")
@@ -56,25 +65,37 @@ with tab2:
         comprobante = st.file_uploader("Sube la foto de tu comprobante de transferencia *")
         
         if st.form_submit_button("Enviar Registro"):
-            fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-            nuevo_bloque = {
-                "vendedor": nombre, "whatsapp": wapp, "punto": punto,
-                "categoria": cat, "productos": productos, "fotos_b64": fotos_b64, "estado": "ESPERA"
-            }
-            with get_db() as db:
-                lista = db.get("bloques", [])
-                lista.append(nuevo_bloque)
-                db["bloques"] = lista
-            st.success("¡Registro enviado, Capitana!")
+            if nombre and wapp and productos and fotos:
+                fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
+                nuevo_bloque = {
+                    "vendedor": nombre, "whatsapp": wapp, "punto": punto,
+                    "categoria": cat, "productos": productos, "fotos_b64": fotos_b64, "estado": "ESPERA"
+                }
+                with get_db() as db:
+                    lista = db.get("bloques", [])
+                    lista.append(nuevo_bloque)
+                    db["bloques"] = lista
+                st.success("¡Registro enviado, Capitana!")
+            else:
+                st.error("Por favor completa los campos obligatorios.")
 
 with tab3:
-    pwd = st.text_input("Clave Admin", type="password")
-    if pwd == "admin":
+    if "admin_autenticado" not in st.session_state:
+        st.session_state.admin_autenticado = False
+
+    if not st.session_state.admin_autenticado:
+        pwd = st.text_input("Clave Admin", type="password")
+        if st.button("Acceder"):
+            if pwd == "admin123": # Puedes cambiar esta clave
+                st.session_state.admin_autenticado = True
+                st.rerun()
+    else:
+        st.write("Panel de Control Activo")
         with get_db() as db:
             bloques = db.get("bloques", [])
             for i, b in enumerate(bloques):
                 if b['estado'] == "ESPERA":
-                    if st.button(f"Activar: {b['vendedor']}"):
+                    if st.button(f"Activar: {b['vendedor']}", key=f"btn_{i}"):
                         bloques[i]['estado'] = "ACTIVO"
                         db["bloques"] = bloques
                         st.rerun()
