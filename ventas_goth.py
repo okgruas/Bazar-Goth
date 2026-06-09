@@ -18,100 +18,87 @@ def guardar_datos_disco(datos):
 if "bloques_db" not in st.session_state:
     st.session_state.bloques_db = cargar_datos_disco()
 
-# --- 3. CSS GOTH TÉTRICO ---
+# --- 3. CSS (Manteniendo tu estilo original) ---
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at center, #2a0845 0%, #050505 70%) !important; color: #d1d1d1 !important; }
-    .fb-header-container { background: rgba(0, 0, 0, 0.6); border: 2px solid #5d0f75; box-shadow: 0 0 20px rgba(93, 15, 117, 0.5); border-radius: 20px; padding: 25px; margin-bottom: 30px; text-align: center; }
-    .shein-card { background: rgba(10, 10, 10, 0.7); border: 1px solid #4a0072; border-radius: 15px; padding: 15px; margin-bottom: 15px; backdrop-filter: blur(5px); }
-    .pago-card { background: rgba(30, 0, 45, 0.5); border: 1px solid #8a2be2; padding: 15px; border-radius: 10px; margin: 10px 0; color: #e0e0e0; }
-    .stTextInput>div>div>input, .stTextArea>div>textarea { background: #000 !important; color: #fff !important; border: 1px solid #5d0f75 !important; }
-    h1, h2, h3 { color: #b39ddb !important; text-shadow: 0 0 10px rgba(179, 157, 219, 0.5); }
+    .stApp { background: #050505 !important; color: #e0e0e0 !important; }
+    .fb-header-container { background: rgba(20, 20, 20, 0.8); border: 1px solid #9d50bb; border-radius: 20px; padding: 20px; margin-bottom: 30px; }
+    .shein-card { background: rgba(255, 255, 255, 0.03); border: 1px solid #9d50bb; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    h1, h2, h3 { color: #9d50bb !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- 4. ENCABEZADO ---
 st.markdown("""
     <div class="fb-header-container">
-        <h1>🌙 BAZAR NOCTURNAL GOTH</h1>
-        <p style='font-style: italic; color: #9575cd;'>Tu estilo, nuestra esencia</p>
+        <h1 style='text-align:center;'>🌙 BAZAR NOCTURNAL GOTH</h1>
+        <p style='text-align:center; font-style: italic;'>Tu estilo, nuestra esencia</p>
     </div>
 """, unsafe_allow_html=True)
 
 tab_bazar, tab_anunciarse, tab_admin = st.tabs(["🛍️ Catálogo Goth", "💜 Registrar Espacio", "🔐 Admin"])
 
-# --- PESTAÑA CATALOGO ---
+# --- PESTAÑA CATÁLOGO (Visualización de fotos) ---
 with tab_bazar:
     bloques_activos = {k: v for k, v in st.session_state.bloques_db.items() if v['estado'] == "🟢 ACTIVO"}
     cols = st.columns(3)
     for i, (id_b, info_b) in enumerate(bloques_activos.items()):
         with cols[i % 3]:
-            # Renderizado de portadas (2) y fotos de prendas (15) usando base64
-            html_portadas = "".join([f'<img src="data:image/png;base64,{b}" style="width:100%; margin-bottom:5px; border-radius:10px;">' for b in info_b.get('portadas_b64', [])])
-            html_fotos = "".join([f'<img src="data:image/png;base64,{b}" style="width:60px; height:60px; object-fit:cover; margin:2px; border-radius:5px; border: 1px solid #5d0f75;">' for b in info_b.get('fotos_b64', [])])
+            # Renderizado de Portada y Perfil (Facebook Style)
+            portada_b64 = info_b.get('portada_b64', '')
+            perfil_b64 = info_b.get('perfil_b64', '')
+            
+            # Renderizado de hasta 15 fotos de prendas
+            fotos_html = "".join([f'<img src="data:image/png;base64,{b}" style="width:50px; margin:2px;">' for b in info_b.get('fotos_prendas_b64', [])])
             
             st.markdown(f"""
                 <div class="shein-card">
-                    {html_portadas}
+                    <img src="data:image/png;base64,{portada_b64}" style="width:100%; border-radius:10px;">
+                    <img src="data:image/png;base64,{perfil_b64}" style="width:60px; border-radius:50%; margin-top:-30px; margin-left:10px; border:3px solid #050505;">
                     <h3>{info_b['vendedor']}</h3>
-                    <p style="font-size: 12px; color: #9575cd;">📍 {info_b['zona']}</p>
-                    <div style="font-size: 13px; max-height: 100px; overflow-y: auto;">{info_b['articulos']}</div>
-                    <div style="margin-top:10px;">{html_fotos}</div>
+                    <p>📍 {info_b['zona']}</p>
+                    <div>{info_b['articulos']}</div>
+                    <div style="margin-top:10px;">{fotos_html}</div>
                 </div>
             """, unsafe_allow_html=True)
 
 # --- PESTAÑA REGISTRO ---
 with tab_anunciarse:
     st.subheader("💜 Registra tu Bloque de Anuncios")
-    st.markdown("**Costo por bloque: $25 MXN con una vigencia automática de 15 días.**")
-    
+    st.markdown("Costo por bloque: $25 MXN con una vigencia automática de 15 días.")
     with st.form("form_goth", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre = st.text_input("Nombre / Tienda *")
-            whatsapp = st.text_input("WhatsApp *")
-        with col2:
-            zona = st.text_input("Punto de Entrega *")
-            cat = st.radio("Categoría *", ["K-Pop", "Mi Clóset"], horizontal=True)
+        nombre = st.text_input("Nombre / Tienda *")
+        whatsapp = st.text_input("WhatsApp *")
+        zona = st.text_input("Punto de Entrega *")
         
         # Nuevos campos de carga
-        portadas = st.file_uploader("🖼️ 2 Portadas (Perfil y Portada)", type=["jpg", "png"], accept_multiple_files=True)
+        foto_portada = st.file_uploader("🖼️ Foto de Portada", type=["jpg", "png"])
+        foto_perfil = st.file_uploader("👤 Foto de Perfil", type=["jpg", "png"])
+        
         lista = st.text_area("Artículos y Precios *")
-        fotos = st.file_uploader("📸 Fotos de artículos (Hasta 15)", type=["jpg", "png"], accept_multiple_files=True)
-        
-        st.markdown("""
-            <div class="pago-card">
-                <p><strong>Titular: Yajaira Leija (Capitana Albatros)</strong></p>
-                <p>🏦 Pago: NU MÉXICO | CLABE: 0123 4567 8901 2345 67</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        comprobante = st.file_uploader("Subir Comprobante *", type=["jpg", "png"])
+        fotos_prendas = st.file_uploader("📸 Fotos de prendas (Hasta 15)", type=["jpg", "png"], accept_multiple_files=True)
         
         if st.form_submit_button("Subir Bloque"):
-            if nombre and whatsapp and zona and lista and comprobante:
-                # Conversión a b64 para persistencia
-                portadas_b64 = [base64.b64encode(f.read()).decode() for f in portadas]
-                fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-                
-                id_b = f"GOTH-{datetime.now().strftime('%M%S')}"
-                st.session_state.bloques_db[id_b] = {
-                    "vendedor": nombre, "whatsapp": whatsapp, "zona": zona,
-                    "articulos": lista, "portadas_b64": portadas_b64, "fotos_b64": fotos_b64,
-                    "estado": "⏳ En espera", "categoria": cat
-                }
-                guardar_datos_disco(st.session_state.bloques_db)
-                st.success("¡Solicitud enviada, Capitana!")
-            else:
-                st.error("Por favor completa los campos obligatorios.")
+            # Conversión a b64
+            p_b64 = base64.b64encode(foto_portada.read()).decode() if foto_portada else ""
+            pe_b64 = base64.b64encode(foto_perfil.read()).decode() if foto_perfil else ""
+            f_b64 = [base64.b64encode(f.read()).decode() for f in fotos_prendas]
+            
+            id_b = f"GOTH-{datetime.now().strftime('%M%S')}"
+            st.session_state.bloques_db[id_b] = {
+                "vendedor": nombre, "whatsapp": whatsapp, "zona": zona,
+                "articulos": lista, "portada_b64": p_b64, "perfil_b64": pe_b64,
+                "fotos_prendas_b64": f_b64, "estado": "⏳ En espera"
+            }
+            guardar_datos_disco(st.session_state.bloques_db)
+            st.success("¡Enviado, Capitana!")
 
 # --- PESTAÑA ADMIN ---
 with tab_admin:
     clave = st.text_input("Clave Admin:", type="password")
     if clave == "bazar123":
         for id_b, info in st.session_state.bloques_db.items():
-            st.write(f"{info['vendedor']} - {info['estado']}")
-            if st.button(f"Activar {id_b}"):
+            if st.button(f"Activar {info['vendedor']}"):
                 st.session_state.bloques_db[id_b]['estado'] = "🟢 ACTIVO"
                 guardar_datos_disco(st.session_state.bloques_db)
                 st.rerun()
