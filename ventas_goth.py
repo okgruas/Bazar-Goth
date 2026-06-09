@@ -17,15 +17,50 @@ def guardar_datos_disco(datos):
 if "bloques_db" not in st.session_state:
     st.session_state.bloques_db = cargar_datos_disco()
 
-# --- 3. CSS GOTH LUXURY ---
+# --- 3. CSS GOTH TÉTRICO ---
 st.markdown("""
     <style>
-    .stApp { background: #050505 !important; color: #e0e0e0 !important; }
-    .fb-header-container { background: rgba(20, 20, 20, 0.8); border: 1px solid #9d50bb; border-radius: 20px; padding: 25px; margin-bottom: 30px; text-align: center; }
-    .shein-card { background: rgba(255, 255, 255, 0.03); border: 1px solid #9d50bb; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-    .pago-card { background: rgba(157, 80, 187, 0.1); border: 1px dashed #9d50bb; padding: 15px; border-radius: 10px; margin: 10px 0; }
-    .stTextInput>div>div>input, .stTextArea>div>textarea { background: #111; color: white; border: 1px solid #9d50bb; }
-    h1, h2, h3 { color: #9d50bb !important; }
+    /* Fondo Radial Tétrico */
+    .stApp { 
+        background: radial-gradient(circle at center, #2a0845 0%, #050505 70%) !important; 
+        color: #d1d1d1 !important; 
+    }
+    
+    .fb-header-container { 
+        background: rgba(0, 0, 0, 0.6); 
+        border: 2px solid #5d0f75; 
+        box-shadow: 0 0 20px rgba(93, 15, 117, 0.5);
+        border-radius: 20px; 
+        padding: 25px; 
+        margin-bottom: 30px; 
+        text-align: center; 
+    }
+    
+    .shein-card { 
+        background: rgba(10, 10, 10, 0.7); 
+        border: 1px solid #4a0072; 
+        border-radius: 15px; 
+        padding: 15px; 
+        margin-bottom: 15px; 
+        backdrop-filter: blur(5px);
+    }
+    
+    .pago-card { 
+        background: rgba(30, 0, 45, 0.5); 
+        border: 1px solid #8a2be2; 
+        padding: 15px; 
+        border-radius: 10px; 
+        margin: 10px 0; 
+        color: #e0e0e0;
+    }
+    
+    .stTextInput>div>div>input, .stTextArea>div>textarea { 
+        background: #000 !important; 
+        color: #fff !important; 
+        border: 1px solid #5d0f75 !important; 
+    }
+    
+    h1, h2, h3 { color: #b39ddb !important; text-shadow: 0 0 10px rgba(179, 157, 219, 0.5); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -33,11 +68,11 @@ st.markdown("""
 st.markdown("""
     <div class="fb-header-container">
         <h1>🌙 BAZAR NOCTURNAL GOTH</h1>
-        <p style='font-style: italic; color: #aaa;'>Tu estilo, nuestra esencia</p>
+        <p style='font-style: italic; color: #9575cd;'>Tu estilo, nuestra esencia</p>
     </div>
 """, unsafe_allow_html=True)
 
-tab_bazar, tab_anunciarse, tab_admin = st.tabs(["🛍️ Catálogo Goth", "💜 Registrar Espacio", "🔐 Admin"])
+tab_bazar, tab_anunciarse, tab_admin = st.tabs(["🛍️ Catálogo", "💜 Registro", "🔐 Admin"])
 
 # --- PESTAÑA CATALOGO ---
 with tab_bazar:
@@ -48,7 +83,7 @@ with tab_bazar:
             st.markdown(f"""
                 <div class="shein-card">
                     <h3>{info_b['vendedor']}</h3>
-                    <p style="font-size: 12px;">📍 {info_b['zona']}</p>
+                    <p style="font-size: 12px; color: #9575cd;">📍 {info_b['zona']}</p>
                     <div style="font-size: 13px; max-height: 100px; overflow-y: auto;">{info_b['articulos']}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -56,7 +91,6 @@ with tab_bazar:
 # --- PESTAÑA REGISTRO ---
 with tab_anunciarse:
     st.subheader("💜 Registra tu Bloque de Anuncios")
-    # Texto informativo basado en image_6b7d02.png
     st.markdown("**Costo por bloque: $25 MXN con una vigencia automática de 15 días.**")
     
     with st.form("form_goth", clear_on_submit=True):
@@ -102,3 +136,4 @@ with tab_admin:
                 st.session_state.bloques_db[id_b]['estado'] = "🟢 ACTIVO"
                 guardar_datos_disco(st.session_state.bloques_db)
                 st.rerun()
+            
