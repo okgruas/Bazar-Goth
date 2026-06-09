@@ -1,26 +1,16 @@
 import streamlit as st
+from datetime import datetime
 import shelve
 import base64
 
-# Configuración de página
-st.set_page_config(page_title="Bazar Digital K-Pop & Clóset", layout="wide")
+# --- CONFIGURACIÓN ---
+st.set_page_config(page_title="Bazar Nocturnal", layout="wide")
 
-# Estilos CSS para el look rosa
-st.markdown("""
-    <style>
-    .stApp { background-color: #fff0f5; }
-    .stButton>button { background-color: #ec407a; color: white; }
-    h1, h2, h3 { color: #ec407a; }
-    .card { border: 1px solid #ec407a; padding: 15px; border-radius: 10px; background: white; margin-bottom: 10px; }
-    </style>
-""", unsafe_allow_html=True)
-
-# Manejo de base de datos
 def get_db():
-    return shelve.open("bazar_db")
+    return shelve.open("bazar_db", writeback=True)
 
-st.markdown("<h1 style='text-align:center;'>🌙 BAZAR DIGITAL K-POP & CLÓSET</h1>", unsafe_allow_html=True)
-
+# --- UI PRINCIPAL ---
+st.markdown("<h1 style='text-align:center;'>🌙 BAZAR NOCTURNAL GOTH</h1>", unsafe_allow_html=True)
 tab1, tab2, tab3 = st.tabs(["🛍️ Ver el Bazar / Clóset", "💜 Registrarse como Vendedora", "🔐"])
 
 with tab1:
@@ -30,75 +20,19 @@ with tab1:
         for b in bloques:
             if b.get('estado') == "ACTIVO":
                 with st.container():
-                    st.markdown(f"### {b['vendedor']}")
-                    # Mostrar Portada y Perfil
-                    cols_head = st.columns([3, 1])
-                    if b.get('portada_b64'):
-                        st.image(base64.b64decode(b['portada_b64']), use_container_width=True)
-                    if b.get('perfil_b64'):
-                        st.image(base64.b64decode(b['perfil_b64']), width=100)
-                    
-                    st.write(f"**Categoría:** {b['categoria']} | **Punto:** {b['punto']}")
+                    st.markdown(f"**🟢 ACTIVO** - {b['vendedor']}")
+                    st.write(f"Categoría: {b['categoria']} | Punto: {b['punto']}")
                     st.info(b['productos'])
                     
-                    # Mostrar fotos de artículos
+                    st.write("📸 Fotos:")
                     cols = st.columns(5)
+                    # Recuperar y mostrar fotos guardadas en base64
                     for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
                         with cols[idx % 5]:
                             st.image(base64.b64decode(img_b64))
                     
                     st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
                     st.divider()
-
-with tab2:
-    with st.form("registro_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        nombre = col1.text_input("Nombre / Tienda *")
-        punto = col2.text_input("Punto Seguro de Entrega *")
-        wapp = col1.text_input("WhatsApp (con código de país, ej 52...) *")
-        cat = col2.radio("Categoría *", ["K-Pop", "Mi Clóset"])
-        
-        portada = st.file_uploader("🖼️ Foto de Portada", type=['jpg', 'png'])
-        perfil = st.file_uploader("👤 Foto de Perfil", type=['jpg', 'png'])
-        productos = st.text_area("Lista tus productos *")
-        fotos = st.file_uploader("📸 Fotos de artículos", accept_multiple_files=True)
-        
-        if st.form_submit_button("Enviar Registro"):
-            p_b64 = base64.b64encode(portada.read()).decode() if portada else ""
-            pe_b64 = base64.b64encode(perfil.read()).decode() if perfil else ""
-            f_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-            
-            with get_db() as db:
-                lista = db.get("bloques", [])
-                lista.append({
-                    "vendedor": nombre, "whatsapp": wapp, "punto": punto, "categoria": cat,
-                    "productos": productos, "portada_b64": p_b64, "perfil_b64": pe_b64,
-                    "fotos_b64": f_b64, "estado": "ESPERA"
-                })
-                db["bloques"] = lista
-            st.success("¡Registro enviado!")
-
-with tab3:
-    if "auth" not in st.session_state: st.session_state.auth = False
-    if not st.session_state.auth:
-        if st.text_input("Clave", type="password") == "admin123":
-            st.session_state.auth = True
-            st.rerun()
-    else:
-        with get_db() as db:
-            bloques = db.get("bloques", [])
-            for i, b in enumerate(bloques):
-                if b['estado'] == "ESPERA":
-                    if st.button(f"Activar: {b['vendedor']}", key=i):
-                        bloques[i]['estado'] = "ACTIVO"
-                        db["bloques"] = bloques
-                        st.rerun()                cols = st.columns(5)
-                for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
-                    with cols[idx % 5]:
-                        st.image(base64.b64decode(img_b64))
-                
-                st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
-                st.divider()
 
 with tab2:
     st.subheader("💜 Registra tu Bloque de Anuncios")
@@ -124,6 +58,7 @@ with tab2:
         
         if st.form_submit_button("Enviar Registro"):
             if nombre and wapp and productos and fotos:
+                # Convertimos fotos a base64 para que no se pierdan al recargar
                 fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
                 nuevo_bloque = {
                     "vendedor": nombre, "whatsapp": wapp, "punto": punto,
@@ -135,20 +70,27 @@ with tab2:
                     db["bloques"] = lista
                 st.success("¡Registro enviado, Capitana!")
             else:
-                st.error("Por favor completa los campos obligatorios.")
+                st.error("Por favor completa todos los campos obligatorios.")
 
 with tab3:
-    if "admin_autenticado" not in st.session_state:
-        st.session_state.admin_autenticado = False
+    # Lógica de seguridad con candadito
+    if 'admin_ok' not in st.session_state:
+        st.session_state.admin_ok = False
 
-    if not st.session_state.admin_autenticado:
-        pwd = st.text_input("Clave Admin", type="password")
+    if not st.session_state.admin_ok:
+        pwd = st.text_input("🔑 Clave Admin", type="password")
         if st.button("Acceder"):
-            if pwd == "admin123": # Puedes cambiar esta clave
-                st.session_state.admin_autenticado = True
+            if pwd == "admin": 
+                st.session_state.admin_ok = True
                 st.rerun()
+            else:
+                st.error("Clave incorrecta.")
     else:
-        st.write("Panel de Control Activo")
+        if st.button("Cerrar Panel 🔐"):
+            st.session_state.admin_ok = False
+            st.rerun()
+            
+        st.write("--- Solicitudes Pendientes ---")
         with get_db() as db:
             bloques = db.get("bloques", [])
             for i, b in enumerate(bloques):
