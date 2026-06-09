@@ -1,101 +1,104 @@
 import streamlit as st
 from datetime import datetime
 import shelve
-import base64
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Bazar Nocturnal", layout="wide")
+# --- 1. CONFIGURACIÓN ---
+st.set_page_config(page_title="Bazar Nocturnal Goth", page_icon="🌙", layout="wide")
 
-def get_db():
-    return shelve.open("bazar_db", writeback=True)
+# --- 2. PERSISTENCIA ---
+def cargar_datos_disco():
+    with shelve.open("bazar_goth_db") as db:
+        return dict(db.get("bloques_db", {}))
 
-# --- UI PRINCIPAL ---
-st.markdown("<h1 style='text-align:center;'>🌙 BAZAR NOCTURNAL GOTH</h1>", unsafe_allow_html=True)
-tab1, tab2, tab3 = st.tabs(["🛍️ Ver el Bazar / Clóset", "💜 Registrarse como Vendedora", "🔐"])
+def guardar_datos_disco(datos):
+    with shelve.open("bazar_goth_db") as db:
+        db["bloques_db"] = datos
 
-with tab1:
-    st.subheader("🛒 Clósets y Productos Disponibles")
-    with get_db() as db:
-        bloques = db.get("bloques", [])
-        for b in bloques:
-            if b.get('estado') == "ACTIVO":
-                with st.container():
-                    st.markdown(f"**🟢 ACTIVO** - {b['vendedor']}")
-                    st.write(f"Categoría: {b['categoria']} | Punto: {b['punto']}")
-                    st.info(b['productos'])
-                    
-                    st.write("📸 Fotos:")
-                    cols = st.columns(5)
-                    # Recuperar y mostrar fotos guardadas en base64
-                    for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
-                        with cols[idx % 5]:
-                            st.image(base64.b64decode(img_b64))
-                    
-                    st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
-                    st.divider()
+if "bloques_db" not in st.session_state:
+    st.session_state.bloques_db = cargar_datos_disco()
 
-with tab2:
+# --- 3. CSS GOTH LUXURY ---
+st.markdown("""
+    <style>
+    .stApp { background: #050505 !important; color: #e0e0e0 !important; }
+    .fb-header-container { background: rgba(20, 20, 20, 0.8); border: 1px solid #9d50bb; border-radius: 20px; padding: 25px; margin-bottom: 30px; text-align: center; }
+    .shein-card { background: rgba(255, 255, 255, 0.03); border: 1px solid #9d50bb; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    .pago-card { background: rgba(157, 80, 187, 0.1); border: 1px dashed #9d50bb; padding: 15px; border-radius: 10px; margin: 10px 0; }
+    .stTextInput>div>div>input, .stTextArea>div>textarea { background: #111; color: white; border: 1px solid #9d50bb; }
+    h1, h2, h3 { color: #9d50bb !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 4. ENCABEZADO ---
+st.markdown("""
+    <div class="fb-header-container">
+        <h1>🌙 BAZAR NOCTURNAL GOTH</h1>
+        <p style='font-style: italic; color: #aaa;'>Tu estilo, nuestra esencia</p>
+    </div>
+""", unsafe_allow_html=True)
+
+tab_bazar, tab_anunciarse, tab_admin = st.tabs(["🛍️ Catálogo Goth", "💜 Registrar Espacio", "🔐 Admin"])
+
+# --- PESTAÑA CATALOGO ---
+with tab_bazar:
+    bloques_activos = {k: v for k, v in st.session_state.bloques_db.items() if v['estado'] == "🟢 ACTIVO"}
+    cols = st.columns(3)
+    for i, (id_b, info_b) in enumerate(bloques_activos.items()):
+        with cols[i % 3]:
+            st.markdown(f"""
+                <div class="shein-card">
+                    <h3>{info_b['vendedor']}</h3>
+                    <p style="font-size: 12px;">📍 {info_b['zona']}</p>
+                    <div style="font-size: 13px; max-height: 100px; overflow-y: auto;">{info_b['articulos']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+# --- PESTAÑA REGISTRO ---
+with tab_anunciarse:
     st.subheader("💜 Registra tu Bloque de Anuncios")
+    # Texto informativo basado en image_6b7d02.png
     st.markdown("**Costo por bloque: $25 MXN con una vigencia automática de 15 días.**")
     
-    with st.form("registro_form", clear_on_submit=True):
-        st.markdown("### 👤 1. Datos de Contacto")
+    with st.form("form_goth", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        nombre = col1.text_input("Nombre / Tienda *")
-        punto = col2.text_input("Punto Seguro de Entrega *")
-        wapp = col1.text_input("WhatsApp de Contacto *")
-        cat = col2.radio("Categoría *", ["K-Pop (Photocards/Coleccionables)", "Mi Clóset (Ropa/Accesorios)"])
+        with col1:
+            nombre = st.text_input("Nombre / Tienda *")
+            whatsapp = st.text_input("WhatsApp *")
+        with col2:
+            zona = st.text_input("Punto de Entrega *")
+            cat = st.radio("Categoría *", ["K-Pop", "Mi Clóset"], horizontal=True)
         
-        st.markdown("### 🛍️ 2. Tus Artículos y Precios")
-        productos = st.text_area("Lista tus productos (Uno por renglón, con precio) *")
+        lista = st.text_area("Artículos y Precios *")
+        fotos = st.file_uploader("📸 Fotos de artículos (Hasta 15)", type=["jpg", "png"], accept_multiple_files=True)
         
-        st.markdown("### 📸 3. Fotos de tus Artículos (Máximo 15)")
-        fotos = st.file_uploader("Selecciona tus imágenes", accept_multiple_files=True)
+        st.markdown("""
+            <div class="pago-card">
+                <p><strong>Titular: Yajaira Leija (Capitana Albatros)</strong></p>
+                <p>🏦 Pago: NU MÉXICO | CLABE: 0123 4567 8901 2345 67</p>
+            </div>
+        """, unsafe_allow_html=True)
         
-        st.markdown("### 💳 4. Pago de Validación ($25 MXN)")
-        st.info("🏦 BANCO: NU MÉXICO\n🔑 CLABE: 0123 4567 8901 2345 67\n👤 TITULAR: CAPITANA ALBATROS")
-        comprobante = st.file_uploader("Sube la foto de tu comprobante de transferencia *")
+        comprobante = st.file_uploader("Subir Comprobante *", type=["jpg", "png"])
         
-        if st.form_submit_button("Enviar Registro"):
-            if nombre and wapp and productos and fotos:
-                # Convertimos fotos a base64 para que no se pierdan al recargar
-                fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-                nuevo_bloque = {
-                    "vendedor": nombre, "whatsapp": wapp, "punto": punto,
-                    "categoria": cat, "productos": productos, "fotos_b64": fotos_b64, "estado": "ESPERA"
+        if st.form_submit_button("Subir Bloque"):
+            if nombre and whatsapp and zona and lista and comprobante and len(fotos) <= 15:
+                id_b = f"GOTH-{datetime.now().strftime('%M%S')}"
+                st.session_state.bloques_db[id_b] = {
+                    "vendedor": nombre, "whatsapp": whatsapp, "zona": zona,
+                    "articulos": lista, "imagenes": fotos, "estado": "⏳ En espera", "categoria": cat
                 }
-                with get_db() as db:
-                    lista = db.get("bloques", [])
-                    lista.append(nuevo_bloque)
-                    db["bloques"] = lista
-                st.success("¡Registro enviado, Capitana!")
+                guardar_datos_disco(st.session_state.bloques_db)
+                st.success("¡Solicitud enviada, Capitana!")
             else:
-                st.error("Por favor completa todos los campos obligatorios.")
+                st.error("Verifica campos obligatorios y máximo 15 fotos.")
 
-with tab3:
-    # Lógica de seguridad con candadito
-    if 'admin_ok' not in st.session_state:
-        st.session_state.admin_ok = False
-
-    if not st.session_state.admin_ok:
-        pwd = st.text_input("🔑 Clave Admin", type="password")
-        if st.button("Acceder"):
-            if pwd == "admin": 
-                st.session_state.admin_ok = True
+# --- PESTAÑA ADMIN ---
+with tab_admin:
+    clave = st.text_input("Clave Admin:", type="password")
+    if clave == "bazar123":
+        for id_b, info in st.session_state.bloques_db.items():
+            st.write(f"{info['vendedor']} - {info['estado']}")
+            if st.button(f"Activar {id_b}"):
+                st.session_state.bloques_db[id_b]['estado'] = "🟢 ACTIVO"
+                guardar_datos_disco(st.session_state.bloques_db)
                 st.rerun()
-            else:
-                st.error("Clave incorrecta.")
-    else:
-        if st.button("Cerrar Panel 🔐"):
-            st.session_state.admin_ok = False
-            st.rerun()
-            
-        st.write("--- Solicitudes Pendientes ---")
-        with get_db() as db:
-            bloques = db.get("bloques", [])
-            for i, b in enumerate(bloques):
-                if b['estado'] == "ESPERA":
-                    if st.button(f"Activar: {b['vendedor']}", key=f"btn_{i}"):
-                        bloques[i]['estado'] = "ACTIVO"
-                        db["bloques"] = bloques
-                        st.rerun()
