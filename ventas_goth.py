@@ -4,104 +4,91 @@ import shelve
 import base64
 
 # --- 1. CONFIGURACIÓN ---
-st.set_page_config(page_title="Bazar Nocturnal Goth", page_icon="🌙", layout="wide")
+st.set_page_config(page_title="Bazar Digital", layout="wide")
 
 # --- 2. PERSISTENCIA ---
-def cargar_datos_disco():
-    with shelve.open("bazar_goth_db") as db:
-        return dict(db.get("bloques_db", {}))
+def get_db():
+    return shelve.open("bazar_db", writeback=True)
 
-def guardar_datos_disco(datos):
-    with shelve.open("bazar_goth_db") as db:
-        db["bloques_db"] = datos
-
-if "bloques_db" not in st.session_state:
-    st.session_state.bloques_db = cargar_datos_disco()
-
-# Función auxiliar para convertir imagen a base64
-def img_to_base64(img_file):
-    return base64.b64encode(img_file.read()).decode()
-
-# --- 3. CSS GOTH TÉTRICO ---
+# --- 3. CSS (Estilo Rosa) ---
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at center, #2a0845 0%, #050505 70%) !important; color: #d1d1d1 !important; }
-    .shein-card { background: rgba(10, 10, 10, 0.8); border: 1px solid #4a0072; border-radius: 15px; padding: 0; overflow: hidden; margin-bottom: 20px; }
-    .portada { width: 100%; height: 150px; object-fit: cover; }
-    .perfil { width: 80px; height: 80px; border-radius: 50%; border: 4px solid #050505; margin-top: -40px; margin-left: 20px; }
-    .info-container { padding: 15px; }
-    h3 { margin-top: 5px; color: #b39ddb !important; }
+    .stApp { background-color: #fff0f5; }
+    .card { border: 1px solid #ec407a; padding: 15px; border-radius: 15px; background: white; margin-bottom: 20px; }
+    .portada { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; }
+    .perfil { width: 80px; height: 80px; border-radius: 50%; border: 3px solid white; margin-top: -40px; margin-left: 15px; }
+    h1, h2, h3 { color: #ec407a; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. ENCABEZADO ---
-st.markdown("<h1 style='text-align:center; color:#b39ddb;'>🌙 BAZAR NOCTURNAL GOTH</h1>", unsafe_allow_html=True)
+# --- 4. INTERFAZ ---
+st.markdown("<h1 style='text-align:center;'>🌙 BAZAR DIGITAL K-POP & CLÓSET</h1>", unsafe_allow_html=True)
 
-tab_bazar, tab_anunciarse, tab_admin = st.tabs(["🛍️ Catálogo", "💜 Registro", "🔐 Admin"])
+tab1, tab2, tab3 = st.tabs(["🛍️ Ver el Bazar / Clóset", "💜 Registrarse como Vendedora", "🔐 Admin"])
 
-# --- PESTAÑA CATALOGO ---
-with tab_bazar:
-    bloques_activos = {k: v for k, v in st.session_state.bloques_db.items() if v['estado'] == "🟢 ACTIVO"}
-    cols = st.columns(3)
-    for i, (id_b, info_b) in enumerate(bloques_activos.items()):
-        with cols[i % 3]:
-            # Recuperar imágenes guardadas
-            p_b64 = info_b.get('portada_b64', '')
-            pe_b64 = info_b.get('perfil_b64', '')
-            fotos_b64 = info_b.get('fotos_b64', [])
-            
-            fotos_html = "".join([f'<img src="data:image/png;base64,{f}" style="width:50px; height:50px; margin:2px; object-fit:cover;">' for f in fotos_b64])
-            
-            st.markdown(f"""
-                <div class="shein-card">
-                    <img src="data:image/png;base64,{p_b64}" class="portada">
-                    <img src="data:image/png;base64,{pe_b64}" class="perfil">
-                    <div class="info-container">
-                        <h3>{info_b['vendedor']}</h3>
-                        <p style="font-size: 12px; color: #9575cd;">📍 {info_b['zona']}</p>
-                        <div style="font-size: 13px; max-height: 80px; overflow-y: auto;">{info_b['articulos']}</div>
-                        <div style="margin-top:10px;">{fotos_html}</div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+with tab1:
+    st.subheader("🛒 Clósets Disponibles")
+    with get_db() as db:
+        bloques = db.get("bloques", [])
+        for b in bloques:
+            if b['estado'] == "ACTIVO":
+                with st.container():
+                    # Mostrar Portada y Perfil
+                    if b.get('portada_b64'):
+                        st.image(base64.b64decode(b['portada_b64']), use_container_width=True)
+                    if b.get('perfil_b64'):
+                        st.image(base64.b64decode(b['perfil_b64']), width=100)
+                    
+                    st.markdown(f"### {b['vendedor']}")
+                    st.write(f"📍 Punto: {b['punto']} | Categoría: {b['categoria']}")
+                    st.info(b['productos'])
+                    
+                    # Mostrar fotos de artículos
+                    cols = st.columns(5)
+                    for idx, img_b64 in enumerate(b.get('fotos_b64', [])):
+                        with cols[idx % 5]:
+                            st.image(base64.b64decode(img_b64))
+                    
+                    st.link_button("Contactar por WhatsApp", f"https://wa.me/{b['whatsapp']}")
+                    st.divider()
 
-# --- PESTAÑA REGISTRO ---
-with tab_anunciarse:
-    with st.form("form_goth", clear_on_submit=True):
+with tab2:
+    with st.form("registro_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         nombre = col1.text_input("Nombre / Tienda *")
-        whatsapp = col2.text_input("WhatsApp *")
-        zona = st.text_input("Punto de Entrega *")
+        punto = col2.text_input("Punto Seguro de Entrega *")
+        wapp = col1.text_input("WhatsApp (ej: 52...) *")
+        cat = col2.radio("Categoría *", ["K-Pop", "Mi Clóset"])
         
-        c1, c2 = st.columns(2)
-        foto_portada = c1.file_uploader("🖼️ Foto Portada", type=["jpg", "png"])
-        foto_perfil = c2.file_uploader("👤 Foto Perfil", type=["jpg", "png"])
+        portada = st.file_uploader("🖼️ Foto de Portada", type=['jpg', 'png'])
+        perfil = st.file_uploader("👤 Foto de Perfil", type=['jpg', 'png'])
+        productos = st.text_area("Lista tus productos *")
+        fotos = st.file_uploader("📸 Fotos de artículos", accept_multiple_files=True)
         
-        lista = st.text_area("Artículos y Precios *")
-        fotos = st.file_uploader("📸 Fotos artículos (Hasta 15)", type=["jpg", "png"], accept_multiple_files=True)
-        
-        if st.form_submit_button("Subir Bloque"):
-            if nombre and foto_portada and foto_perfil:
-                # Procesar imágenes a base64
-                p_b64 = img_to_base64(foto_portada)
-                pe_b64 = img_to_base64(foto_perfil)
-                f_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-                
-                id_b = f"GOTH-{datetime.now().strftime('%M%S')}"
-                st.session_state.bloques_db[id_b] = {
-                    "vendedor": nombre, "whatsapp": whatsapp, "zona": zona,
-                    "articulos": lista, "portada_b64": p_b64, "perfil_b64": pe_b64,
-                    "fotos_b64": f_b64, "estado": "⏳ En espera"
-                }
-                guardar_datos_disco(st.session_state.bloques_db)
-                st.success("¡Solicitud enviada, Capitana!")
+        if st.form_submit_button("Enviar Registro"):
+            # Convertir imágenes a base64 para guardarlas permanentemente
+            p_b64 = base64.b64encode(portada.read()).decode() if portada else ""
+            pe_b64 = base64.b64encode(perfil.read()).decode() if perfil else ""
+            f_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
+            
+            with get_db() as db:
+                lista = db.get("bloques", [])
+                lista.append({
+                    "vendedor": nombre, "whatsapp": wapp, "punto": punto, "categoria": cat,
+                    "productos": productos, "portada_b64": p_b64, "perfil_b64": pe_b64,
+                    "fotos_b64": f_b64, "estado": "ESPERA"
+                })
+                db["bloques"] = lista
+            st.success("¡Registro enviado, espera a que sea activado!")
 
-# --- PESTAÑA ADMIN ---
-with tab_admin:
-    clave = st.text_input("Clave Admin:", type="password")
-    if clave == "bazar123":
-        for id_b, info in st.session_state.bloques_db.items():
-            if st.button(f"Activar {info['vendedor']}", key=id_b):
-                st.session_state.bloques_db[id_b]['estado'] = "🟢 ACTIVO"
-                guardar_datos_disco(st.session_state.bloques_db)
-                st.rerun()
+with tab3:
+    pwd = st.text_input("Clave Admin", type="password")
+    if pwd == "admin123":
+        with get_db() as db:
+            bloques = db.get("bloques", [])
+            for i, b in enumerate(bloques):
+                if b['estado'] == "ESPERA":
+                    if st.button(f"Activar: {b['vendedor']}", key=i):
+                        bloques[i]['estado'] = "ACTIVO"
+                        db["bloques"] = bloques
+                        st.rerun()
