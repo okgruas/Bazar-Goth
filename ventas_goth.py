@@ -1,27 +1,28 @@
 import streamlit as st
-from datetime import datetime
 import shelve
 import base64
+from datetime import datetime
 
-# --- 1. CONFIGURACIÓN ---
+# --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Bazar Nocturnal Goth", page_icon="🌙", layout="wide")
 
-# --- 2. PERSISTENCIA ---
+# --- PERSISTENCIA ---
 def cargar_db():
     return shelve.open("bazar_goth_db", writeback=True)
 
-# --- 3. CSS GOTH (Tu esencia original) ---
+# --- CSS (Estilo Facebook para fotos + Estilo Goth) ---
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at center, #2a0845 0%, #050505 70%) !important; color: #d1d1d1 !important; }
-    .fb-header { background: rgba(0, 0, 0, 0.6); border: 2px solid #5d0f75; border-radius: 20px; padding: 25px; text-align: center; margin-bottom: 20px; }
-    .card { background: rgba(10, 10, 10, 0.8); border: 1px solid #4a0072; border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-    h1, h2, h3 { color: #b39ddb !important; }
+    .fb-card { background: rgba(0, 0, 0, 0.6); border: 2px solid #5d0f75; border-radius: 15px; overflow: hidden; margin-bottom: 20px; padding: 0; }
+    .portada { width: 100%; height: 180px; object-fit: cover; }
+    .perfil { width: 100px; height: 100px; border-radius: 50%; border: 4px solid #000; margin-top: -50px; margin-left: 20px; }
+    .info { padding: 15px; }
+    h1 { color: #b39ddb !important; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. ENCABEZADO ---
-st.markdown("""<div class="fb-header"><h1>🌙 BAZAR NOCTURNAL GOTH</h1><p>Tu estilo, nuestra esencia</p></div>""", unsafe_allow_html=True)
+st.markdown("<h1>🌙 BAZAR NOCTURNAL GOTH</h1>", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🛍️ Catálogo", "💜 Registro", "🔐 Admin"])
 
@@ -34,40 +35,54 @@ with tab1:
             if b.get('estado') == "🟢 ACTIVO":
                 with cols[i % 3]:
                     st.markdown(f"""
-                        <div class="card">
-                            <h3>{b['vendedor']}</h3>
-                            <p>📍 {b['zona']}</p>
-                            <p>{b['articulos']}</p>
+                        <div class="fb-card">
+                            <img src="data:image/png;base64,{b['portada']}" class="portada">
+                            <img src="data:image/png;base64,{b['perfil']}" class="perfil">
+                            <div class="info">
+                                <h3>{b['vendedor']}</h3>
+                                <p>📍 {b['zona']}</p>
+                                <p>🛍️ {b['articulos']}</p>
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
-                    # Mostrar las fotos guardadas en base64
-                    for img_b64 in b.get('fotos_b64', []):
-                        st.image(base64.b64decode(img_b64), width=100)
+                    # Galería de artículos
+                    for img in b.get('fotos_articulos', []):
+                        st.image(base64.b64decode(img), width=80)
 
-# --- REGISTRO (Campos Rosa) ---
+# --- REGISTRO ---
 with tab2:
+    st.markdown("### 💜 Registra tu Bloque de Anuncios")
+    st.info("Costo por bloque: $25 MXN | Vigencia: 15 días")
     with st.form("registro", clear_on_submit=True):
         col1, col2 = st.columns(2)
         nombre = col1.text_input("Nombre / Tienda *")
         zona = col2.text_input("Punto Seguro de Entrega *")
-        wapp = col1.text_input("WhatsApp de Contacto *")
+        wapp = col1.text_input("WhatsApp (10 dígitos) *")
         cat = col2.radio("Categoría *", ["K-Pop", "Mi Clóset"])
-        articulos = st.text_area("Lista tus productos (Uno por renglón con precio) *")
-        fotos = st.file_uploader("📸 Fotos de artículos (Hasta 15)", accept_multiple_files=True)
+        articulos = st.text_area("Artículos y Precios *")
         
-        if st.form_submit_button("Subir Bloque"):
-            if nombre and zona and articulos and fotos:
-                fotos_b64 = [base64.b64encode(f.read()).decode() for f in fotos]
-                with cargar_db() as db:
-                    lista = db.get("bloques", [])
-                    lista.append({
-                        "vendedor": nombre, "zona": zona, "wapp": wapp, 
-                        "articulos": articulos, "fotos_b64": fotos_b64, "estado": "⏳ En espera"
-                    })
-                    db["bloques"] = lista
-                st.success("¡Solicitud enviada, Capitana!")
-            else:
-                st.error("Por favor completa todos los campos marcados con *")
+        # Fotos de estilo FB
+        portada = st.file_uploader("🖼️ Foto de Portada (Estilo FB)", type=['jpg', 'png'])
+        perfil = st.file_uploader("👤 Foto de Perfil", type=['jpg', 'png'])
+        fotos_art = st.file_uploader("📸 Fotos de artículos (Hasta 15)", accept_multiple_files=True)
+        
+        pago = st.file_uploader("💸 Subir Comprobante de Pago *", type=['jpg', 'png'])
+
+        if st.form_submit_button("Subir Bloque para Validación"):
+            # Conversión a base64
+            p_b64 = base64.b64encode(portada.read()).decode() if portada else ""
+            pe_b64 = base64.b64encode(perfil.read()).decode() if perfil else ""
+            f_b64 = [base64.b64encode(f.read()).decode() for f in fotos_art]
+            
+            with cargar_db() as db:
+                lista = db.get("bloques", [])
+                lista.append({
+                    "vendedor": nombre, "zona": zona, "articulos": articulos,
+                    "portada": p_b64, "perfil": pe_b64, "fotos_articulos": f_b64,
+                    "estado": "⏳ En espera"
+                })
+                db["bloques"] = lista
+            st.success("¡Registro enviado! Será activado pronto.")
 
 # --- ADMIN ---
 with tab3:
@@ -76,7 +91,7 @@ with tab3:
             lista = db.get("bloques", [])
             for i, b in enumerate(lista):
                 if b['estado'] == "⏳ En espera":
-                    if st.button(f"Activar {b['vendedor']}", key=str(i)):
+                    if st.button(f"Validar y Activar: {b['vendedor']}", key=str(i)):
                         lista[i]['estado'] = "🟢 ACTIVO"
                         db["bloques"] = lista
                         st.rerun()
